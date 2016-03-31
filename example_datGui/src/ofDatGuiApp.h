@@ -14,7 +14,6 @@ public:
 
 	void keyPressed(int key);
 
-	void parameterChanged( std::string & );
 
 	//----
 	ofxPanel gui;
@@ -24,9 +23,8 @@ public:
 	ofParameter<ofColor> color1;
 	ofParameter<bool> toggle1, toggle2;
 
+    void parameterChanged( std::string & );
 	ofxSyncedParams paramSync;
-
-	//--- WebSocket
     ofxLibwebsockets::Server server;
 
     // websocket methods
