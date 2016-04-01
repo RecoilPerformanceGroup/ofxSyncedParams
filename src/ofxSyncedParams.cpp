@@ -74,23 +74,33 @@ void ofxSyncedParams::updateParamFromJson(ofxJSONElement json){
 		ofParameter<bool> & p = param.cast<bool>();
 		p.set(json["value"].asBool());
 	}
-	else if(type==typeid(ofParameter<ofColor>).name()){
-		ofParameter<ofColor> p = param.cast<ofColor>();
-		ofxJSONElement elem = json["value"];
-		if (elem.isArray()){ // get out RGBA
-			float r = elem[0].asInt();
-			float g = elem[1].asInt();
-			float b = elem[2].asInt();
-			p.set( ofColor(r,g,b));
-		} else {
-			std::string hex = elem.asString();
-			hex.erase(0, 1);
-			unsigned int color = strtoul(hex.c_str(), NULL, 16);
-			ofColor c;
-			c.setHex(color);
-			p.set(c);
-		}
-	}
+    else if(type==typeid(ofParameter<ofColor>).name()){
+        ofParameter<ofColor> p = param.cast<ofColor>();
+        ofxJSONElement elem = json["value"];
+        if (elem.isArray()){ // get out RGBA
+            float r = elem[0].asInt();
+            float g = elem[1].asInt();
+            float b = elem[2].asInt();
+            p.set( ofColor(r,g,b));
+        } else {
+            std::string hex = elem.asString();
+            hex.erase(0, 1);
+            unsigned int color = strtoul(hex.c_str(), NULL, 16);
+            ofColor c;
+            c.setHex(color);
+            p.set(c);
+        }
+    }
+    else if(type==typeid(ofParameter<ofVec3f>).name()){
+        ofParameter<ofVec3f> p = param.cast<ofVec3f>();
+        ofxJSONElement elem = json["value"];
+        if (elem.isArray()){ // get out XYZ
+            float x = elem[0]["value"].asFloat();
+            float y = elem[1]["value"].asFloat();
+            float z = elem[2]["value"].asFloat();
+            p.set( ofVec3f(x,y,z));
+        }
+    }
 }
 
 Json::Value ofxSyncedParams::parseParamGroup(ofParameterGroup & _parameters, bool bInnerGroup = false){
@@ -129,9 +139,9 @@ Json::Value ofxSyncedParams::parseParamGroup(ofParameterGroup & _parameters, boo
             valToAddSub["value"] = p.get();
             bKnownParameter = true;
 
-		}else if(type==typeid(ofParameter<ofColor>).name()){
-
-			ofParameter<ofColor> p = _parameters.getColor(i);
+        }else if(type==typeid(ofParameter<ofColor>).name()){
+            
+            ofParameter<ofColor> p = _parameters.getColor(i);
             
             ofColor temp = p;
             Json::Value jsonArray;
@@ -142,15 +152,49 @@ Json::Value ofxSyncedParams::parseParamGroup(ofParameterGroup & _parameters, boo
             valToAddSub["type"] = "color";
             valToAddSub["value"] = jsonArray;
             bKnownParameter = true;
+            
+        }else if(type==typeid(ofParameter<ofVec3f>).name()){
+            
+            ofParameter<ofVec3f> p = _parameters.getVec3f(i);
+            
+            Json::Value jsonTempX;
+            Json::Value jsonTempY;
+            Json::Value jsonTempZ;
 
-		}else if(type==typeid(ofParameterGroup).name()){
+            jsonTempX["orderIdx"] = 0;
+            jsonTempX["type"] = "float";
+            jsonTempX["value"] = p.get().x + 0.0001;     //TODO ok it's unhappy if see an "int" so this is a hack...
+            jsonTempX["min"] = p.getMin().x;
+            jsonTempX["max"] = p.getMax().x;
 
-			ofParameterGroup p = _parameters.getGroup(i);
-            Json::Value jsonTemp = parseParamGroup (p, true);
-			json[ p.getName() ]["members"] = jsonTemp;
+            jsonTempY["orderIdx"] = 1;
+            jsonTempY["type"] = "float";
+            jsonTempY["value"] = p.get().y + 0.0001;     //TODO ok it's unhappy if see an "int" so this is a hack...
+            jsonTempY["min"] = p.getMin().y;
+            jsonTempY["max"] = p.getMax().y;
+
+            jsonTempZ["orderIdx"] = 2;
+            jsonTempZ["type"] = "float";
+            jsonTempZ["value"] = p.get().z + 0.0001;     //TODO ok it's unhappy if see an "int" so this is a hack...
+            jsonTempZ["min"] = p.getMin().z;
+            jsonTempZ["max"] = p.getMax().z;
+
+            Json::Value jsonArray;
+            jsonArray.append(jsonTempX);
+            jsonArray.append(jsonTempY);
+            jsonArray.append(jsonTempZ);
+            
+            json[ p.getName() ]["members"] = jsonArray;
             json[ p.getName() ]["orderIdx"] = i;
-
-		}else{
+            
+        }else if(type==typeid(ofParameterGroup).name()){
+            
+            ofParameterGroup p = _parameters.getGroup(i);
+            Json::Value jsonTemp = parseParamGroup (p, true);
+            json[ p.getName() ]["members"] = jsonTemp;
+            json[ p.getName() ]["orderIdx"] = i;
+            
+        }else{
             ofLogWarning() << "ofxBaseGroup; no control for parameter of type " << type;
 		}
 
